@@ -1,0 +1,418 @@
+---
+title: "Trabajo Multivariado"
+subtitle: "Parcial 3"
+author: "Ana María López - Pedro Pablo Villegas - Esteban Tabares"
+date: "Noviembre, 2017"
+citation_package: natbib
+bibliography: Parcial3.bib
+biblio-style: apalike
+output: pdf_document
+keep_md: true
+---
+
+```{r load myData, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# Estructura de Directorios
+dir.principal  <- '../'
+dir.funciones  <- '../RScripts'
+dir.markdown  <- '../RMarkdown'
+dir.input      <- '../Data/In/'
+dir.output     <- '../Data/Out/'
+library(car) # Transformación de poder
+library(ggplot2) # Gráficas
+library(dplyr) # Manejo de datos, ggplot2 trabaja mejor con dplyr
+library(tibble) # Caso especial de un data.frame
+library(MVN) # Pruebas de normalidad multivariada
+library(ellipse)
+#load(paste(dir.principal,"Multivariado.RData",sep=""))
+```
+## PUNTO 5.4
+Use los datos del sudor de la tabla 5.1:
+
+\centerline{\includegraphics[height=4in]{TABLA5.1.PNG}}
+
+Definimos entonces las variables de las siguiente manera:
+
+X1: Sweat Rate (Tasa de Sudor)$\\$
+X2: Sodium (Contenido de Sodio)$\\$
+X3: Potasssium (Contenido de Potasio)$\\$
+
+* Determine los ejes de la elipsoide del 90% de confidencia para $\mu$. Determine la longitud de los ejes.
+
+Para el caso de $p=3$, los ejes de la región de confianza o Elipse de confianza y sus respectivas longitudes relativas, son determinados a partir de los eigen-valores y eigen-vectores de S.  Para los datos de la tabla 5.1 tenemos $\underline{\overline{X}}$ y $\mathrm{S}$ definida de la siguiente manera:
+
+```{r ,  fig.width=5, fig.height=5, fig.align='center', echo=FALSE}
+X <- read.table(paste(dir.input,"T5-1.DAT",sep=""))
+H0 <- cbind(4,50,10)
+alpha <- 0.10
+colnames(X) <- c("X1","X2","X3")
+xbar1 <- mean(X$X1)
+xbar2 <- mean(X$X2)
+xbar3 <- mean(X$X3)
+n <- dim(X)[1]
+p <- dim(X)[2]
+xbar <- matrix(rbind(xbar1,xbar2,xbar3),ncol=1)
+xbar
+S <- cov(X)
+S
+S1 <- solve(S)
+#S1
+
+T2 <- n%*%(t(xbar)-H0)%*%S1%*%(xbar-t(H0))
+#T2
+
+FVC <- (n-1)*p/(n-p)*qf(1-alpha, p, n-p, lower.tail = TRUE, log.p = FALSE)
+#FVC
+
+e <- eigen(S)
+lambda <- e$values
+ei <- e$vectors
+
+#if(T2>FVC){
+#  print("Rechaza H0")
+#} else{
+#  print("Acepta H0")
+#}  
+
+
+#library(ellipse)
+#     plot(ellipse(S,centre=xbar,t=sqrt(((n-1)*p/(n*(n-p)))*qf(0.90,p,n-p))),type="l")
+#     points(xbar[1,],xbar[2,])
+
+#     eigen(S)
+```
+
+Para los eigen-valores y eigen-vectores se tiene:
+```{r ,  fig.width=5, fig.height=5, fig.align='center', echo=FALSE}
+e
+```
+Iniciando en el centro $\underline{\overline{X}}$, los ejes del elipsoide de confianza son:
+
+$\pm\sqrt{\lambda_i}\sqrt{\dfrac{(n-1)p}{(n-p)n}F_{\alpha;p,n-p}}e_i$
+
+con $Se_i=\lambda_ie_i$ para $i=1,2,3$.
+
+Para el calculo de las semi-longitudes tenemos:
+$\pm\sqrt{\lambda_i}\sqrt{\dfrac{(n-1)p}{(n-p)n}F_{\alpha;p,n-p}}$ 
+
+Tenemos entonces para los datos que las semi-longitudes son las siguientes:
+
+```{r ,  fig.width=5, fig.height=5, fig.align='center', echo=FALSE}
+longitudes <- matrix(sqrt(e$values)*sqrt(((n-1)*p)/((n-p)*n)*qf(1-alpha, p, n-p, lower.tail = TRUE, log.p = FALSE)),ncol=1)
+longitudes
+```
+
+Para el calculo de los ejes, usaremos los eigen-vectores, teniendo como resultado lo siguiente:
+
+$\pm(9.0506741)\begin{bmatrix}
+    -0.05084144\\
+    0.99828352\\
+    0.02907156\\
+\end{bmatrix}$
+
+$\pm(1.3607857)\begin{bmatrix}
+    -0.57370364\\
+    0.05302042\\
+    0.81734508\\
+\end{bmatrix}$
+
+$\pm(0.7292367)\begin{bmatrix}
+    0.81748351\\
+    -0.02487655\\
+    0.57541452\\
+\end{bmatrix}$
+
+
+```{r ,  fig.width=5, fig.height=5, fig.align='center', echo=FALSE}
+#longitudes[1]*e$vectors[,1]
+#longitudes[2]*e$vectors[,2]
+#longitudes[3]*e$vectors[,3]
+#e$vectors
+```
+
+El intervalos $T^2$ con un nivel de confianza del $90\%$ seria el siguiente:
+```{r ,  fig.width=5, fig.height=5, fig.align='center', echo=FALSE}
+cc <- qf(1-alpha, p, n-p, lower.tail = TRUE, log.p = FALSE)
+#sqrt(((n-1)*p)/((n-p))*cc)
+mu.L=xbar-matrix(sqrt(((n-1)*p)/((n-p))*cc)*sqrt(diag(S/n)),ncol=1)
+mu.U=xbar+matrix(sqrt(((n-1)*p)/((n-p))*cc)*sqrt(diag(S/n)),ncol=1)
+T <- cbind(mu.L,mu.U)
+par(mfrow =c(1,1))
+N <- c(n,n,n)
+Media <- xbar
+Desv_Estandar <- diag(S)
+T2_Low <- T[,1]
+T2_Up <- T[,2]
+Resultado <- data.frame(N, Media, Desv_Estandar,T2_Low,T2_Up)
+Resultado
+```
+
+* Construya un grafico QQ para las observaciones en tasa de sudor, contenido de sodio y contenido de potasio respectivamente.  Construir las tres posibles graficas de dispersión para las parejas de observaciones. Es la suposición de normal multivariada aceptada en este caso?
+
+Se realiza el grafico QQ para cada una de las variables:
+
+```{r ,  fig.width=8, fig.height=4, fig.align='center', echo=FALSE}
+# Diagnóstico gráfico
+par(mfrow = c(1, 3))
+qqnorm(X$X1,
+       main = "qq-plot Tasa de Sudor",
+       xlab = "Cuantiles teoricos",
+       ylab = "Cuantiles muestrales")
+qqline(X$X1, col = "red")
+
+qqnorm(X$X2,
+       main = "qq-plot Contenido de Sodio",
+       xlab = "Cuantiles teoricos",
+       ylab = "Cuantiles muestrales")
+qqline(X$X2, col = "red")
+
+qqnorm(X$X3,
+       main = "qq-plot Contenido de Potasio",
+       xlab = "Cuantiles teoricos",
+       ylab = "Cuantiles muestrales")
+qqline(X$X3, col = "red")
+
+```
+Del gráfico qqplot se observa que X1 y X2 son claramente normales, para X3 observamos que al principio hay un desvío de los quantiles teóricos, sin embargo podemos concluir que son normales pues solo tres observaciones se desvían de los cuantiles teóricos.
+
+```{r ,  fig.width=8, fig.height=4, fig.align='center', echo=FALSE}
+# Pruebas formales
+X1_shapiro <- shapiro.test(X$X1)
+X2_shapiro <- shapiro.test(X$X2)
+X3_shapiro <- shapiro.test(X$X3)
+
+p.univariado <- c(X1_shapiro$p.value, X2_shapiro$p.value,
+                  X3_shapiro$p.value)
+
+p.univariado <- as.data.frame(p.univariado)
+
+row.names(p.univariado) <- c("Tasa de Sudor", "Contenido de Sodio",
+                             "Contenido de Potasio")
+
+colnames(p.univariado) <- "p-valor"
+p.univariado
+```
+
+Revisando el resultado de las pruebas formales, se obtiene que los datos son normales ya que tenemos un valor de mayor de $0.5$.
+
+Graficos de dispersión:
+```{r ,  fig.width=8, fig.height=4, fig.align='center', echo=FALSE}
+pairs(X)
+```
+
+En los gráficos de dispersión bi-variados se observa que X1-X2 y X1-X3 tienen una clara dispersión elipsoidal lo que nos puede indicar una normalidad bi-variada. Para X2-X3 no es tan claro en la gráfica, pero da la impresión de normalidad, esto lo comprobaremos con los gráficos chi-cuadrado y pruebas de hipótesis de Mardia.
+
+Ahora se realiza el analisis bivariado por las diferentes combinaciones entre las 3 variables:
+
+```{r ,  fig.width=5, fig.height=3, fig.align='center', echo=FALSE}
+par(mfrow = c(1,3))
+X1X2 <- mardiaTest(X[, c(1, 2)], qqplot = TRUE)
+X1X3 <- mardiaTest(X[, c(1, 3)], qqplot = TRUE)
+X2X3 <- mardiaTest(X[, c(2, 3)], qqplot = TRUE)
+```
+Se observa que los datos para X1-X2, X1-X3 y X2-X3 siguen claramente la línea de los cuantiles teóricos de una normal bi-variada.
+
+```{r ,  fig.width=5, fig.height=8, fig.align='center', echo=FALSE}
+par(mfrow =c(1,1))
+
+bivariados <- c("X1 - X2",
+                "X1 - X3",
+                "X2 - X3")
+
+p.value.kurt <- c(X1X2@p.value.kurt,
+                  X1X3@p.value.kurt,
+                  X2X3@p.value.kurt)
+
+p.value.skew <- c(X1X2@p.value.skew,
+                  X1X3@p.value.skew,
+                  X2X3@p.value.skew)
+
+p.value.small <- c(X1X2@p.value.small,
+                  X1X3@p.value.small,
+                  X2X3@p.value.small)
+
+normalidad.bivariada <- data.frame(bivariados, p.value.kurt, p.value.skew, p.value.small)
+normalidad.bivariada
+```
+De la prueba de Mardia, y los valores p de la kurtosis y la asimetría y con un nivel de confianza del 95%, tenemos que ninguno rechaza la hipótesis nula de que los datos provienen de una distribución normal bi-variada
+
+## PUNTO 5.9
+
+Harry Roberts, un naturalista para el departamento de Alaska Fish and Game, estudio los osos pardos con la meta de manterner una población saludable.  Mediciones en $n=61$ de osos proveen el siguiente resumen de estadisticas:
+
+Variable    |    Peso (Kg)   | Longitud Cuerpo (cm) |    Cuello (cm)    | Cintura (cm) | Longitud Cabeza (cm) | Ancho Cabeza (cm) 
+--------------- | ------------- | -------------------- | ----------------- | ------------------- | -------------------- | -----------------
+Media ($\bar{x}$) | 95.52 | 164.38 | 55.69 | 93.39 | 17.98 | 31.13
+ 
+Matriz de covarianza:
+
+$\mathrm{S}
+=
+\begin{bmatrix}
+    3266.46 & 1343.97 & 731.54 & 1175.50  & 162.68 & 238.37 \\
+    1343.97 & 721.91 & 324.25 & 537.35  & 80.17 & 117.73 \\
+    731.54 & 324.25 & 179.28 & 281.17  & 39.15 & 56.80 \\
+    1175.50 & 537.35 & 281.17 & 474.98  & 63.73 & 94.85 \\
+    162.68 & 80.17 & 39.15 & 63.73  & 9.95 & 13.88 \\
+    238.37 & 117.73 & 56.80 & 94.85  & 13.88 & 21.26 \\
+\end{bmatrix}$
+
+* Obtener la muestra grande de intervalos de confianza simultaneos al 95% para las seis mediciones de las medias de 
+
+
+Obtenga la muestra grande Intervalos de confianza simultáneos al 95% para las seis mediciones medias de población del poblamiento
+
+
+```{r ,  fig.width=5, fig.height=5, fig.align='center', echo=FALSE}
+x=c(95.52, 164.38, 55.69, 93.39, 17.98, 31.13  )
+s=c(3266.46, 721.91, 179.28, 474.98, 9.95, 21.26)
+f=qf(0.05, 6, 55, lower.tail=F)
+inferior = x-sqrt(((61-1)*6*f)/(61-6) )*sqrt(s/61)
+inferior
+superior= x+sqrt(((61-1)*6*f)/(61-6) )*sqrt(s/61)
+superior
+d=data.frame(inferior,superior)
+d
+
+library(xtable)
+print(xtable(d), include.rownames = FALSE)
+
+
+
+
+
+x1 <- c(3266.46, 1175.50 )
+x4 <- c(1175.50, 474.98 )
+S <- rbind(x1,x4)
+S
+dbar=c(95.52, 93.39)
+dbar
+v <- eigen(S)
+v
+
+
+library(ellipse)
+plot(ellipse(S,centre=dbar,t=sqrt(((61-1)*6/(61*(61-6)))*qf(0.95,6,61-6))),type="l", xlim = c(60,130), ylim = c(70, 120),lwd=3.2, col=3,
+main="Large sample 95% confidence regions.", xlab = "Weigth",
+     ylab = "Girth")
+lines(x=c(115.49,115.49), y=c(85.78,101), lty=2, lwd=3)
+lines(x=c(75.55,75.55), y=c(85.78,101), lty=2, lwd=3)
+lines(x=c(75.55,115.49), y=c(101,101), lty=2, lwd=3)
+lines(x=c(75.55,115.49), y=c(85.78,85.78), lty=2, lwd=3)
+
+
+lines(x=c(123.72,123.72), y=c(82.64,104.14), lty=3, lwd=3,col=4)
+lines(x=c(67.32,67.32), y=c(82.64,104.14), lty=3, lwd=3,col=4)
+lines(x=c(67.32,123.72), y=c(104.14,104.14), lty=3, lwd=3,col=4)
+lines(x=c(67.32,123.72), y=c(82.64,82.64), lty=3, lwd=3,col=4)
+```
+
+
+
+## PUNTO 5.21
+
+Usando los datos del contenido mineral de los huesos de la Tabla 1.8, construya el intervalo de Bonferroni al $95\%$ para las medias individuales.  Tambien encuentre el $T^2$-Intervalo simultaneo, compare los dos intervalos hallados.
+
+\centerline{\includegraphics[height=4in]{TABLA1.8.PNG}}
+
+Definimos entonces las variables de las siguiente manera:
+
+X1: Dominant Radius$\\$
+X2: Radius$\\$
+X3: Dominant Humerus$\\$
+X4: Humerus$\\$
+X5: Dominant ulna$\\$
+X6: Ulna$\\$
+
+Para hallar los intervalos de Bonferroni y los $T^2$ se calcula $\underline{\overline{X}}$ y $\mathrm{S}$, para Bonferroni los intervalos estan dados por:
+
+$\bar{x_i} \pm  t_{\frac{ \alpha }{2p},\  n-1}  \sqrt{\dfrac{S_{ii}}{n}}$
+
+Así que para los datos del ejercicio los intervalos de Bonferroni con un nivel de confianza del $95\%$ serian:
+
+```{r ,  fig.width=5, fig.height=5, fig.align='center', echo=FALSE}
+X <- read.table(paste(dir.input,"T1-8.DAT",sep=""),col.names = c("X1", "X2", "X3", "X4", "X5", "X6"))
+alpha <- 0.05
+xbar1 <- mean(X$X1)
+xbar2 <- mean(X$X2)
+xbar3 <- mean(X$X3)
+xbar4 <- mean(X$X4)
+xbar5 <- mean(X$X5)
+xbar6 <- mean(X$X6)
+
+n <- dim(X)[1]
+p <- dim(X)[2]
+xbar <- matrix(rbind(xbar1,xbar2,xbar3,xbar4,xbar5,xbar6),ncol=1)
+xbar
+S <- cov(X)
+S
+S1 <- solve(S)
+diag(S)
+
+cc <- qt(alpha/(2*p),n-1,lower.tail=F)
+cc
+mu.L=xbar-cc*matrix(sqrt(diag(S/n)),ncol=1)
+mu.U=xbar+cc*matrix(sqrt(diag(S/n)),ncol=1)
+B <- cbind(mu.L,mu.U)
+B
+```
+
+
+```{r ,  fig.width=5, fig.height=5, fig.align='center', echo=FALSE}
+cc <- qf(1-alpha, p, n-p, lower.tail = TRUE, log.p = FALSE)
+sqrt(((n-1)*p)/((n-p))*cc)
+mu.L=xbar-matrix(sqrt(((n-1)*p)/((n-p))*cc)*sqrt(diag(S/n)),ncol=1)
+mu.U=xbar+matrix(sqrt(((n-1)*p)/((n-p))*cc)*sqrt(diag(S/n)),ncol=1)
+T <- cbind(mu.L,mu.U)
+T
+```
+
+```{r ,  fig.width=5, fig.height=8, fig.align='center', echo=FALSE}
+par(mfrow =c(1,1))
+
+#Variables <- c("X1",
+#                "X2",
+#                "X3",
+#                "X4",
+#                "X5",
+#                "X6")
+
+N <- c(n,n,n,n,n,n)
+
+Media <- xbar
+
+Desv_Estandar <- diag(S)
+
+T2_Low <- T[,1]
+
+T2_Up <- T[,2]
+
+Longitud_T2 <- T[,2]-T[,1]
+
+B_Low <- B[,1]
+
+B_Up <- B[,2]                  
+
+Longitud_B <- B[,2]-B[,1]               
+
+Resultado <- data.frame(N, Media, Desv_Estandar,T2_Low,T2_Up,Longitud_T2,B_Low,B_Up,Longitud_B)
+
+Resultado
+```
+Se observa que los intervalos de Bonferroni siempre son más angostos que los intervalos producidos por el método T2, siendo los de bonferroni más angostos lo que es una característica mejor.
+
+
+
+
+Longitude de los intervalos, practica los boferronio porque son intervalos mas pequeños, longitud de los intervalos
+
+
+se espera que el valor de las medias individuales con un nivel de confianza tal caigan dentro de los intervalos de confianza generados anteriormente.
+
+
+
+
+
+
+
+
